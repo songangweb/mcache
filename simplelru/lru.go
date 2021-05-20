@@ -78,8 +78,8 @@ func (c *LRU) Add(key, value interface{}, expirationTime int64) (ok bool) {
 	}
 	// 创建数据
 	ent := &entry{key, value, expirationTime}
-	entry := c.evictList.PushFront(ent)
-	c.items[key] = entry
+
+	c.items[key] = c.evictList.PushFront(ent)
 	return true
 }
 
@@ -95,9 +95,9 @@ func (c *LRU) Get(key interface{}) (value interface{}, expirationTime int64, ok 
 		}
 		// 数据移到头部
 		c.evictList.MoveToFront(ent)
-		if ent.Value.(*entry) == nil {
-			return nil, 0, false
-		}
+		//if ent.Value.(*entry) == nil {
+		//	return nil, 0, false
+		//}
 		return ent.Value.(*entry).value, ent.Value.(*entry).expirationTime, true
 	}
 	return nil, 0, false
@@ -155,7 +155,7 @@ func (c *LRU) RemoveOldest() (key interface{}, value interface{}, expirationTime
 			return c.RemoveOldest()
 		}
 		c.removeElement(ent)
-		//kv := ent.Value.(*entry)
+
 		return ent.Value.(*entry).key, ent.Value.(*entry).value, ent.Value.(*entry).expirationTime, true
 	}
 	return nil, nil, 0, false
@@ -166,7 +166,6 @@ func (c *LRU) RemoveOldest() (key interface{}, value interface{}, expirationTime
 func (c *LRU) GetOldest() (key interface{}, value interface{}, expirationTime int64, ok bool) {
 	ent := c.evictList.Back()
 	if ent != nil {
-		//kv := ent.Value.(*entry)
 		// 判断此值是否已经超时,如果超时则进行删除
 		if checkExpirationTime(ent.Value.(*entry).expirationTime) {
 			c.removeElement(ent)
@@ -222,11 +221,8 @@ func (c *LRU) removeOldest() {
 // removeElement 从缓存中移除一个列表元素
 func (c *LRU) removeElement(e *list.Element) {
 	c.evictList.Remove(e)
-	//kv := e.Value.(*entry)
-	//delete(c.items, kv.key)
 	delete(c.items, e.Value.(*entry).key)
 	if c.onEvict != nil {
-		//c.onEvict(kv.key, kv.value, kv.expirationTime)
 		c.onEvict(e.Value.(*entry).key, e.Value.(*entry).value, e.Value.(*entry).expirationTime)
 	}
 }

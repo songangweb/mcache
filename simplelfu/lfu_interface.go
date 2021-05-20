@@ -1,6 +1,6 @@
 package simplelfu
 
-// LFUCache 定义LFUCache接口
+// LFUCache 是简单LFU缓存的接口。
 type LFUCache interface {
 
 	// Add 向缓存添加一个值。如果已经存在,则更新信息
@@ -33,7 +33,7 @@ type LFUCache interface {
 	// Purge 清除所有缓存项
 	Purge()
 
-	// PurgeOverdue 清除所有过期缓存项
+	// PurgeOverdue 清除所有过期缓存项。
 	PurgeOverdue()
 
 	// Resize 调整缓存大小，返回调整前的数量

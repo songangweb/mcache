@@ -23,7 +23,6 @@ func TestLFU(t *testing.T) {
 
 	for i := 0; i < 256; i++ {
 		l.Add(i, i, initTime)
-
 		for c := 0; c < i; c++ {
 			l.Get(i)
 		}
@@ -36,21 +35,17 @@ func TestLFU(t *testing.T) {
 		t.Fatalf("bad evict count: %v", evictCounter)
 	}
 
-	//for i, k := range l.Keys() {
-	//fmt.Println(i)
-	//fmt.Println(k)
-	//if v, expirationTime, ok := l.Get(k); !ok || (v != k) || (v != i + 128) {
-	//	t.Fatalf("bad key: %v, time: %v", k, expirationTime)
-	//}
-	//}
-
+	for i, k := range l.Keys() {
+		if v, expirationTime, ok := l.Get(k); !ok || v != k || v != 255-i {
+			t.Fatalf("bad key: %v, time: %v", k, expirationTime)
+		}
+	}
 	for i := 0; i < 128; i++ {
 		_, expirationTime, ok := l.Get(i)
 		if ok {
 			t.Fatalf("should be evicted , time: %v", expirationTime)
 		}
 	}
-
 	for i := 128; i < 256; i++ {
 		_, expirationTime, ok := l.Get(i)
 		if !ok {
@@ -74,13 +69,11 @@ func TestLFU(t *testing.T) {
 	}
 
 	l.Get(192) // expect 192 to be last key in l.Keys()
-
-	//for i, k := range l.Keys() {
-	//	if (i < 63 && k != i+193) || (i == 63 && k != 192) {
-	//		fmt.Println(i)
-	//		t.Fatalf("out of order key: %v", k)
-	//	}
-	//}
+	for i, k := range l.Keys() {
+		if (i < 63 && k != 255-i) || (i == 63 && k != 192) {
+			t.Fatalf("out of order i:% v ,key: %v", i, k)
+		}
+	}
 
 	l.Purge()
 	if l.Len() != 0 {
@@ -91,7 +84,7 @@ func TestLFU(t *testing.T) {
 	}
 }
 
-func TestLRU_GetOldest_RemoveOldest(t *testing.T) {
+func TestLFU_GetOldest_RemoveOldest(t *testing.T) {
 	initTime := initTime()
 
 	l, err := NewLFU(128, nil)
@@ -130,7 +123,7 @@ func TestLRU_GetOldest_RemoveOldest(t *testing.T) {
 }
 
 // Test that Add returns true/false if an eviction occurred
-func TestLRU_Add(t *testing.T) {
+func TestLFU_Add(t *testing.T) {
 	initTime := initTime()
 
 	evictCounter := 0
@@ -144,6 +137,7 @@ func TestLRU_Add(t *testing.T) {
 	}
 
 	if l.Add(1, 1, initTime) == false || evictCounter != 0 {
+		t.Errorf(fmt.Sprint(evictCounter))
 		t.Errorf("should not have an eviction")
 	}
 
@@ -154,7 +148,7 @@ func TestLRU_Add(t *testing.T) {
 }
 
 // Test that Contains doesn't update recent-ness
-func TestLRU_Contains(t *testing.T) {
+func TestLFU_Contains(t *testing.T) {
 	initTime := initTime()
 
 	l, err := NewLFU(2, nil)
@@ -165,20 +159,20 @@ func TestLRU_Contains(t *testing.T) {
 	l.Add(1, 1, initTime)
 	l.Get(1)
 	l.Add(2, 2, initTime)
+	l.Get(2)
 	l.Get(2)
 	if !l.Contains(1) {
 		t.Errorf("1 should be contained")
 	}
 
 	l.Add(3, 3, initTime)
-	l.Get(3)
 	if l.Contains(1) {
 		t.Errorf("Contains should not have updated recent-ness of 1")
 	}
 }
 
 // Test that Peek doesn't update recent-ness
-func TestLRU_Peek(t *testing.T) {
+func TestLFU_Peek(t *testing.T) {
 	initTime := initTime()
 
 	l, err := NewLFU(2, nil)
@@ -190,19 +184,19 @@ func TestLRU_Peek(t *testing.T) {
 	l.Get(1)
 	l.Add(2, 2, initTime)
 	l.Get(2)
+	l.Get(2)
 	if v, _, ok := l.Peek(1); !ok || v != 1 {
 		t.Errorf("1 should be set to 1: %v, %v", v, ok)
 	}
 
 	l.Add(3, 3, initTime)
-	l.Get(3)
 	if l.Contains(1) {
 		t.Errorf("should not have updated recent-ness of 1")
 	}
 }
 
 // Test that Resize can upsize and downsize
-func TestLRU_Resize(t *testing.T) {
+func TestLFU_Resize(t *testing.T) {
 	initTime := initTime()
 
 	onEvictCounter := 0
@@ -242,23 +236,7 @@ func TestLRU_Resize(t *testing.T) {
 	}
 }
 
-// 生成当前时间
+// 生成当前时间 + 2秒
 func initTime() int64 {
 	return time.Now().UnixNano()/1e6 + 2000
-}
-
-
-func TestHashccLRU_Resize(t *testing.T) {
-	onEvicted := func(k interface{}, v interface{}, expirationTime int64) {
-	}
-
-	l, _ := NewLFU(100, onEvicted)
-	for i := 0; i < 1000; i++ {
-		l.Add(i,"adadadadsadsaaaddsasssasdadasdsadadadadadadadadasdasdasdasdasdasddasdasdadadadadasdasdadasdasdsadadadasdsadasdasdasdadadadsaasdadasssssssdaaaaaaaadadadadssadasdsdsadasdasdasdad", 0)
-
-		for j := 0; j < i; j++ {
-			vale, timec, _ := l.Get(i)
-			fmt.Println(vale, timec)
-		}
-	}
 }
