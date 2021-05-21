@@ -3,7 +3,6 @@ package mcache
 import (
 	"math/rand"
 	"testing"
-	"time"
 )
 
 func BenchmarkLRU_Rand(b *testing.B) {
@@ -292,9 +291,4 @@ func TestLRUResize(t *testing.T) {
 	if !l.Contains(3) || !l.Contains(4) {
 		t.Errorf("lruCache should have contained 2 elements")
 	}
-}
-
-// 生成当前时间
-func initTime() int64 {
-	return time.Now().UnixNano()/1e6 + 2000
 }

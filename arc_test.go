@@ -192,7 +192,6 @@ func TestARC_Adaptive(t *testing.T) {
 	for i := 0; i < 4; i++ {
 		l.Add(i, i, 0)
 	}
-
 	if n := l.t1.Len(); n != 4 {
 		t.Fatalf("bad: %d", n)
 	}
@@ -210,11 +209,16 @@ func TestARC_Adaptive(t *testing.T) {
 		t.Fatalf("bad: %d", n)
 	}
 
+	//fmt.Println("l.t1: ", l.t1)
+	//fmt.Println("l.t2: ", l.t2)
+	//fmt.Println("l.b1: ", l.b1)
+	//fmt.Println("l.b2: ", l.b2)
+
 	// Current state
-	// t1 : (MRU) [4, 3] (LRU)
+	// t1 : (MRU) [3, 4] (LRU)
+	// t2 : (MRU) [0, 1] (LFU)
 	// b1 : (MRU) [2] (LRU)
-	// t2 : (MRU) [1, 0] (LFU)
-	// b2 : (MRU) [] (LRU)
+	// b2 : (MRU) [] (LFU)
 
 	// Add 2, should cause hit on b1
 	l.Add(2, 2, 0)
@@ -228,17 +232,20 @@ func TestARC_Adaptive(t *testing.T) {
 		t.Fatalf("bad: %d", n)
 	}
 
+	//fmt.Println("--------------")
+	//fmt.Println("l.t1: ", l.t1)
+	//fmt.Println("l.t2: ", l.t2)
+	//fmt.Println("l.b1: ", l.b1)
+	//fmt.Println("l.b2: ", l.b2)
+
 	// Current state
 	// t1 : (MRU) [4] (LRU)
+	// t2 : (MRU) [0, 1, 2] (LFU)
 	// b1 : (MRU) [3] (LRU)
-	// t2 : (MRU) [2, 1, 0] (LFU)
-	// b2 : (MRU) [] (LRU)
+	// b2 : (MRU) [] (LFU)
 
 	// Add 4, should migrate to t2
 	l.Add(4, 4, 0)
-	l.Get(1)
-	l.Get(2)
-	l.Get(4)
 	if n := l.t1.Len(); n != 0 {
 		t.Fatalf("bad: %d", n)
 	}
@@ -246,11 +253,17 @@ func TestARC_Adaptive(t *testing.T) {
 		t.Fatalf("bad: %d", n)
 	}
 
+	//fmt.Println("--------------")
+	//fmt.Println("l.t1: ", l.t1)
+	//fmt.Println("l.t2: ", l.t2)
+	//fmt.Println("l.b1: ", l.b1)
+	//fmt.Println("l.b2: ", l.b2)
+
 	// Current state
 	// t1 : (MRU) [] (LRU)
+	// t2 : (MRU) [0, 1, 2, 4] (LFU)
 	// b1 : (MRU) [3] (LRU)
-	// t2 : (MRU) [4, 2, 1, 0] (LFU)
-	// b2 : (MRU) [] (LRU)
+	// b2 : (MRU) [] (LFU)
 
 	// Add 4, should evict to b2
 	l.Add(5, 5, 0)
@@ -264,36 +277,47 @@ func TestARC_Adaptive(t *testing.T) {
 		t.Fatalf("bad: %d", n)
 	}
 
-	//Current state
-	//t1 : (MRU) [5] (LRU)
-	//b1 : (MRU) [3] (LRU)
-	//t2 : (MRU) [4, 2, 1] (LRU)
-	//b2 : (MRU) [0] (LRU)
+	//fmt.Println("--------------")
+	//fmt.Println("l.t1: ", l.t1)
+	//fmt.Println("l.t2: ", l.t2)
+	//fmt.Println("l.b1: ", l.b1)
+	//fmt.Println("l.b2: ", l.b2)
+
+	// Current state
+	// t1 : (MRU) [5] (LRU)
+	// t2 : (MRU) [0, 1, 2] (LFU)
+	// b1 : (MRU) [3] (LRU)
+	// b2 : (MRU) [4] (LFU)
 
 	// Add 0, should decrease p
 	l.Add(0, 0, 0)
-
-	if n := l.t1.Len(); n != 0 {
+	if n := l.t1.Len(); n != 1 {
 		t.Fatalf("bad: %d", n)
 	}
-	if n := l.t2.Len(); n != 4 {
+	if n := l.t2.Len(); n != 3 {
 		t.Fatalf("bad: %d", n)
 	}
-	if n := l.b1.Len(); n != 2 {
+	if n := l.b1.Len(); n != 1 {
 		t.Fatalf("bad: %d", n)
 	}
-	if n := l.b2.Len(); n != 0 {
+	if n := l.b2.Len(); n != 1 {
 		t.Fatalf("bad: %d", n)
 	}
-	if l.p != 0 {
+	if l.p != 1 {
 		t.Fatalf("bad: %d", l.p)
 	}
 
+	//fmt.Println("--------------")
+	//fmt.Println("l.t1: ", l.t1)
+	//fmt.Println("l.t2: ", l.t2)
+	//fmt.Println("l.b1: ", l.b1)
+	//fmt.Println("l.b2: ", l.b2)
+
 	// Current state
-	// t1 : (MRU) [] (LRU)
-	// b1 : (MRU) [5, 3] (LRU)
-	// t2 : (MRU) [0, 4, 2, 1] (LRU)
-	// b2 : (MRU) [0] (LRU)
+	// t1 : (MRU) [5] (LRU)
+	// t2 : (MRU) [0, 1, 2] (LFU)
+	// b1 : (MRU) [3] (LRU)
+	// b2 : (MRU) [4] (LFU)
 }
 
 func TestARC(t *testing.T) {

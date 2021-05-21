@@ -1,12 +1,7 @@
 package mcache
 
 import (
-	"bytes"
-	"crypto/sha1"
-	"encoding/gob"
-	"fmt"
 	"math/rand"
-	"runtime"
 	"testing"
 )
 
@@ -79,16 +74,13 @@ func TestLFU(t *testing.T) {
 		}
 		evictCounter++
 	}
-	l, err := NewLfuWithEvict(128, onEvicted)
+	l, err := NewLruWithEvict(128, onEvicted)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
 
 	for i := 0; i < 256; i++ {
 		l.Add(i, i, 0)
-		for c := 0; c <= (i + 1); c ++ {
-			l.Get(i)
-		}
 	}
 
 	if l.Len() != 128 {
@@ -99,8 +91,8 @@ func TestLFU(t *testing.T) {
 		t.Fatalf("bad evict count: %v", evictCounter)
 	}
 
-	for _, k := range l.Keys() {
-		if v, _, ok := l.Get(k); !ok || v != k {
+	for i, k := range l.Keys() {
+		if v, _, ok := l.Get(k); !ok || v != k || v != i+128 {
 			t.Fatalf("bad key: %v", k)
 		}
 	}
@@ -124,14 +116,13 @@ func TestLFU(t *testing.T) {
 		}
 	}
 
+	l.Get(192) // expect 192 to be last key in l.Keys()
 
-	//l.Get(192) // expect 192 to be last key in l.Keys()
-	//for i, k := range l.Keys() {
-	//	//fmt.Println(i, k)
-	//	if (i < 63 && k != i+193) || (i == 63 && k != 192) {
-	//		t.Fatalf("out of order key: %v", k)
-	//	}
-	//}
+	for i, k := range l.Keys() {
+		if (i < 63 && k != i+193) || (i == 63 && k != 192) {
+			t.Fatalf("out of order key: %v", k)
+		}
+	}
 
 	l.Purge()
 	if l.Len() != 0 {
@@ -164,21 +155,18 @@ func TestLFUAdd(t *testing.T) {
 
 // test that Contains doesn't update recent-ness
 func TestLFUContains(t *testing.T) {
-	l, err := NewLFU(2)
+	l, err := NewLRU(2)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
 
 	l.Add(1, 1, 0)
-	l.Get(1)
 	l.Add(2, 2, 0)
-	l.Get(2)
 	if !l.Contains(1) {
 		t.Errorf("1 should be contained")
 	}
 
 	l.Add(3, 3, 0)
-	l.Get(3)
 	if l.Contains(1) {
 		t.Errorf("Contains should not have updated recent-ness of 1")
 	}
@@ -186,16 +174,13 @@ func TestLFUContains(t *testing.T) {
 
 // test that ContainsOrAdd doesn't update recent-ness
 func TestLFUContainsOrAdd(t *testing.T) {
-	l, err := NewLFU(2)
+	l, err := NewLRU(2)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
 
 	l.Add(1, 1, 0)
-	l.Get(1)
 	l.Add(2, 2, 0)
-	l.Get(2)
-	l.Get(2)
 	contains, evict := l.ContainsOrAdd(1, 1, 0)
 	if !contains {
 		t.Errorf("1 should be contained")
@@ -219,16 +204,13 @@ func TestLFUContainsOrAdd(t *testing.T) {
 
 // test that PeekOrAdd doesn't update recent-ness
 func TestLFUPeekOrAdd(t *testing.T) {
-	l, err := NewLFU(2)
+	l, err := NewLRU(2)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
 
 	l.Add(1, 1, 0)
-	l.Get(1)
 	l.Add(2, 2, 0)
-	l.Get(2)
-	l.Get(2)
 	previous, contains, evict := l.PeekOrAdd(1, 1, 0)
 	if !contains {
 		t.Errorf("1 should be contained")
@@ -255,16 +237,13 @@ func TestLFUPeekOrAdd(t *testing.T) {
 
 // test that Peek doesn't update recent-ness
 func TestLFUPeek(t *testing.T) {
-	l, err := NewLFU(2)
+	l, err := NewLRU(2)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
 
 	l.Add(1, 1, 0)
-	l.Get(1)
 	l.Add(2, 2, 0)
-	l.Get(2)
-	l.Get(2)
 	if v, _, ok := l.Peek(1); !ok || v != 1 {
 		t.Errorf("1 should be set to 1: %v, %v", v, ok)
 	}
@@ -314,62 +293,3 @@ func TestLFUResize(t *testing.T) {
 	}
 }
 
-var str1 = "阿达萨达是没懂你,那份,三,阿萨德大多多多多多多多多多多多多;看;阿萨德的顶顶顶顶顶大大大大大大低调点多多多多爱斯达克了看看;拉;打开时;打开时;达克赛德;阿昆达;大卡司;的卡萨;狄拉克;打卡的发就是还都分开接受的话福克斯电话费兼课数据胡椒粉康师傅康师傅哈萨克返回空的户口号然后去围殴企鹅怄气无诶殴打去是导读啊啊阿斯达老师点击来得及拉大锯撒百分之真想不明白上没办法陌生拜访饭店阿斯达老师点击来得及拉大锯撒百分之真想不明白上没办法陌生拜访饭店阿斯达老师点击来得及拉大锯撒百分之真想不明白上没办法陌生拜访饭店阿斯达老师点击来得及拉大锯撒百分之真想不明白上没办法陌生拜访饭店阿斯达老师点击来得及拉大锯撒百分之真想不明白上没办法陌生拜访饭店阿斯达老师点击来得及拉大锯撒百分之真想不明白上没办法陌生拜访饭店阿斯达老师点击来得及拉大锯撒百分之真想不明白上没办法陌生拜访饭店阿斯达老师点击来得及拉大锯撒百分之真想不明白上没办法陌生拜访饭店阿斯达老师点击来得及拉大锯撒百分之真想不明白上没办法陌生拜访饭店阿斯达老师点击来得及拉大锯撒百分之真想不明白上没办法陌生拜访饭店阿斯达老师点击来得及拉大锯撒百分之真想不明白上没办法陌生拜访饭店阿斯达老师点击来得及拉大锯撒百分之真想不明白上没办法陌生拜访饭店阿斯达老师点击来得及拉大锯撒百分之真想不明白上没办法陌生拜访饭店阿斯达老师点击来得及拉大锯撒百分之真想不明白上没办法陌生拜访饭店阿斯达老师点击来得及拉大锯撒百分之真想不明白上没办法陌生拜访饭店阿斯达老师点击来得及拉大锯撒百分之真想不明白上没办法陌生拜访饭店阿斯达老师点击来得及拉大锯撒百分之真想不明白上没办法陌生拜访饭店阿斯达老师点击来得及拉大锯撒百分之真想不明白上没办法陌生拜访饭店阿斯达老师点击来得及拉大锯撒百分之真想不明白上没办法陌生拜访饭店阿斯达老师点击来得及拉大锯撒百分之真想不明白上没办法陌生拜访饭店阿斯达老师点击来得及拉大锯撒百分之真想不明白上没办法陌生拜访饭店阿斯达老师点击来得及拉大锯撒百分之真想不明白上没办法陌生拜访饭店阿斯达老师点击来得及拉大锯撒百分之真想不明白上没办法陌生拜访饭店阿斯达老师点击来得及拉大锯撒百分之真想不明白上没办法陌生拜访饭店阿斯达老师点击来得及拉大锯撒百分之真想不明白上没办法陌生拜访饭店阿斯达老师点击来得及拉大锯撒百分之真想不明白上没办法陌生拜访饭店阿斯达老师点击来得及拉大锯撒百分之真想不明白上没办法陌生拜访饭店阿斯达老师点击来得及拉大锯撒百分之真想不明白上没办法陌生拜访饭店阿斯达老师点击来得及拉大锯撒百分之真想不明白上没办法陌生拜访饭店阿斯达老师点击来得及拉大锯撒百分之真想不明白上没办法陌生拜访饭店阿斯达老师点击来得及拉大锯撒百分之真想不明白上没办法陌生拜访饭店阿斯达老师点击来得及拉大锯撒百分之真想不明白上没办法陌生拜访饭店阿斯达老师点击来得及拉大锯撒百分之真想不明白上没办法陌生拜访饭店阿斯达老师点击来得及拉大锯撒百分之真想不明白上没办法陌生拜访饭店阿斯达老师点击来得及拉大锯撒百分之真想不明白上没办法陌生拜访饭店阿斯达老师点击来得及拉大锯撒百分之真想不明白上没办法陌生拜访饭店阿斯达老师点击来得及拉大锯撒百分之真想不明白上没办法陌生拜访饭店阿斯达老师点击来得及拉大锯撒百分之真想不明白上没办法陌生拜访饭店阿斯达老师点击来得及拉大锯撒百分之真想不明白上没办法陌生拜访饭店阿斯达老师点击来得及拉大锯撒百分之真想不明白上没办法陌生拜访饭店阿斯达老师点击来得及拉大锯撒百分之真想不明白上没办法陌生拜访饭店阿斯达老师点击来得及拉大锯撒百分之真想不明白上没办法陌生拜访饭店阿斯达老师点击来得及拉大锯撒百分之真想不明白上没办法陌生拜访饭店阿斯达老师点击来得及拉大锯撒百分之真想不明白上没办法陌生拜访饭店阿斯达老师点击来得及拉大锯撒百分之真想不明白上没办法陌生拜访饭店阿斯达老师点击来得及拉大锯撒百分之真想不明白上没办法陌生拜访饭店阿斯达老师点击来得及拉大锯撒百分之真想不明白上没办法陌生拜访饭店阿斯达老师点击来得及拉大锯撒百分之真想不明白上没办法陌生拜访饭店阿斯达老师点击来得及拉大锯撒百分之真想不明白上没办法陌生拜访饭店阿斯达老师点击来得及拉大锯撒百分之真想不明白上没办法陌生拜访饭店阿斯达老师点击来得及拉大锯撒百分之真想不明白上没办法陌生拜访饭店阿斯达老师点击来得及拉大锯撒百分之真想不明白上没办法陌生拜访饭店阿斯达老师点击来得及拉大锯撒百分之真想不明白上没办法陌生拜访饭店阿斯达老师点击来得及拉大锯撒百分之真想不明白上没办法陌生拜访饭店阿斯达老师点击来得及拉大锯撒百分之真想不明白上没办法陌生拜访饭店阿斯达老师点击来得及拉大锯撒百分之真想不明白上没办法陌生拜访饭店都奥点  按到的1 阿斯达点啊是点 阿斯达老师点击来得及拉大锯撒百分之真想不明白上没办法陌生拜访饭店,三,三方,按,三端, "
-
-func TestHashLRUaa_Resize(t *testing.T) {
-	fmt.Println(runtime.NumCPU())
-	runtime.GOMAXPROCS(runtime.NumCPU())
-	l, _ := NewLFU(1000)
-	c := make(chan int)
-	num := 0
-	for {
-		for k := 0; k < 1000; k++ {
-			go ss(l, c)
-		}
-		// 从channel中获取一个数据
-		data := <-c
-		// 将0视为数据结束
-		if data == 0 {
-			num ++
-		}
-		if num == 1000 {
-			break
-		}
-	}
-}
-
-func ss(cache *LfuCache, c chan int){
-
-	for i := 0; i < 50; i++ {
-		//_ = qumo(&i)
-		cache.Add(i,str1, 0)
-		vale, _, _ := cache.Get(i)
-		cache.Add(i, vale, 0)
-		//fmt.Println(vale, timec)
-			//_, _, _ = cache.Get(i)
-	}
-	// 通知main已经结束循环(我搞定了!)
-	c <- 0
-}
-
-func getBytescc(key interface{}) ([]byte, error) {
-	var buf bytes.Buffer
-	enc := gob.NewEncoder(&buf)
-	err := enc.Encode(key)
-	if err != nil {
-		return nil, err
-	}
-	return buf.Bytes(), nil
-}
-
-func qumo(key interface{}) int {
-	getBytes, err := getBytescc(key)
-	if err != nil {
-		return 0
-	}
-	Sha1Inst := sha1.New()
-	Sha1Inst.Write(getBytes)
-	Result := Sha1Inst.Sum([]byte(""))
-	b := Result[0]
-	return int(b) % 4
-}

@@ -103,10 +103,6 @@ func (c *LFU) Get(key interface{}) (value interface{}, expirationTime int64, ok 
 		if (ent.Prev() != nil) && (ent.Prev().Value.(*entry).weight < ent.Value.(*entry).weight) {
 			c.evictList.MoveBefore(ent, ent.Prev())
 		}
-		// 未发现有啥用, 按理说不应该有这个
-		//if ent.Value.(*entry) == nil {
-		//	return nil, 0, false
-		//}
 		return ent.Value.(*entry).value, ent.Value.(*entry).expirationTime, true
 	}
 	return nil, 0, false

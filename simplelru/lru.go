@@ -95,9 +95,6 @@ func (c *LRU) Get(key interface{}) (value interface{}, expirationTime int64, ok 
 		}
 		// 数据移到头部
 		c.evictList.MoveToFront(ent)
-		//if ent.Value.(*entry) == nil {
-		//	return nil, 0, false
-		//}
 		return ent.Value.(*entry).value, ent.Value.(*entry).expirationTime, true
 	}
 	return nil, 0, false
