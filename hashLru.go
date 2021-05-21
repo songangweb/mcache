@@ -30,7 +30,7 @@ func NewHashLRU(size, sliceNum int) (*HashLruCache, error) {
 // NewHashLruWithEvict constructs a fixed size cache with the given eviction
 // callback.
 // NewHashLruWithEvict 用于在缓存条目被淘汰时的回调函数
-func NewHashLruWithEvict(size, sliceNum int, onEvicted func(key, value *interface{}, expirationTime int64)) (*HashLruCache, error) {
+func NewHashLruWithEvict(size, sliceNum int, onEvicted func(key interface{}, value *interface{}, expirationTime int64)) (*HashLruCache, error) {
 	if 0 == sliceNum {
 		// 设置为当前cpu数量
 		sliceNum = runtime.NumCPU()
@@ -77,8 +77,8 @@ func (h *HashLruCache) PurgeOverdue() {
 
 // Add adds a value to the cache. Returns true if an eviction occurred.
 // Add 向缓存添加一个值。如果已经存在,则更新信息
-func (h *HashLruCache) Add(key, value *interface{}, expirationTime int64) (evicted bool) {
-	sliceKey := h.qumo(key)
+func (h *HashLruCache) Add(key interface{}, value *interface{}, expirationTime int64) (evicted bool) {
+	sliceKey := h.qumo(&key)
 
 	h.list[sliceKey].lock.Lock()
 	evicted = h.list[sliceKey].lru.Add(key, value, expirationTime)
@@ -88,8 +88,8 @@ func (h *HashLruCache) Add(key, value *interface{}, expirationTime int64) (evict
 
 // Get looks up a key's value from the cache.
 // Get 从缓存中查找一个键的值。
-func (h *HashLruCache) Get(key *interface{}) (value *interface{}, expirationTime int64, ok bool) {
-	sliceKey := h.qumo(key)
+func (h *HashLruCache) Get(key interface{}) (value *interface{}, expirationTime int64, ok bool) {
+	sliceKey := h.qumo(&key)
 
 	h.list[sliceKey].lock.Lock()
 	value, expirationTime, ok = h.list[sliceKey].lru.Get(key)
@@ -100,8 +100,8 @@ func (h *HashLruCache) Get(key *interface{}) (value *interface{}, expirationTime
 // Contains checks if a key is in the cache, without updating the
 // recent-ness or deleting it for being stale.
 // Contains 检查某个键是否在缓存中，但不更新缓存的状态
-func (h *HashLruCache) Contains(key *interface{}) bool {
-	sliceKey := h.qumo(key)
+func (h *HashLruCache) Contains(key interface{}) bool {
+	sliceKey := h.qumo(&key)
 
 	h.list[sliceKey].lock.RLock()
 	containKey := h.list[sliceKey].lru.Contains(key)
@@ -112,8 +112,8 @@ func (h *HashLruCache) Contains(key *interface{}) bool {
 // Peek returns the key value (or undefined if not found) without updating
 // the "recently used"-ness of the key.
 // Peek 在不更新的情况下返回键值(如果没有找到则返回false),不更新缓存的状态
-func (h *HashLruCache) Peek(key *interface{}) (value *interface{}, expirationTime int64, ok bool) {
-	sliceKey := h.qumo(key)
+func (h *HashLruCache) Peek(key interface{}) (value *interface{}, expirationTime int64, ok bool) {
+	sliceKey := h.qumo(&key)
 
 	h.list[sliceKey].lock.RLock()
 	value, expirationTime, ok = h.list[sliceKey].lru.Peek(key)
@@ -127,8 +127,8 @@ func (h *HashLruCache) Peek(key *interface{}) (value *interface{}, expirationTim
 // ContainsOrAdd 检查键是否在缓存中，而不更新
 // 最近或删除它，因为它是陈旧的，如果不是，添加值。
 // 返回是否找到和是否发生了驱逐。
-func (h *HashLruCache) ContainsOrAdd(key, value *interface{}, expirationTime int64) (ok, evicted bool) {
-	sliceKey := h.qumo(key)
+func (h *HashLruCache) ContainsOrAdd(key interface{}, value *interface{}, expirationTime int64) (ok, evicted bool) {
+	sliceKey := h.qumo(&key)
 
 	h.list[sliceKey].lock.Lock()
 	defer h.list[sliceKey].lock.Unlock()
@@ -146,8 +146,8 @@ func (h *HashLruCache) ContainsOrAdd(key, value *interface{}, expirationTime int
 // PeekOrAdd 如果一个key在缓存中，那么这个key就不会被更新
 // 最近或删除它，因为它是陈旧的，如果不是，添加值。
 // 返回是否找到和是否发生了驱逐。
-func (h *HashLruCache) PeekOrAdd(key, value *interface{}, expirationTime int64) (previous interface{}, ok, evicted bool) {
-	sliceKey := h.qumo(key)
+func (h *HashLruCache) PeekOrAdd(key interface{}, value *interface{}, expirationTime int64) (previous interface{}, ok, evicted bool) {
+	sliceKey := h.qumo(&key)
 
 	h.list[sliceKey].lock.Lock()
 	defer h.list[sliceKey].lock.Unlock()
@@ -163,8 +163,8 @@ func (h *HashLruCache) PeekOrAdd(key, value *interface{}, expirationTime int64) 
 
 // Remove removes the provided key from the cache.
 // Remove 从缓存中移除提供的键。
-func (h *HashLruCache) Remove(key *interface{}) (present bool) {
-	sliceKey := h.qumo(key)
+func (h *HashLruCache) Remove(key interface{}) (present bool) {
+	sliceKey := h.qumo(&key)
 
 	h.list[sliceKey].lock.Lock()
 	present = h.list[sliceKey].lru.Remove(key)
@@ -190,14 +190,41 @@ func (h *HashLruCache) Resize(size int) (evicted int) {
 	return evicted
 }
 
-//// Keys returns a slice of the keys in the cache, from oldest to newest.
-//// Keys 返回缓存中键的切片，从最老到最新
-//func (h *HashLruCache) Keys() []*interface{} {
-//	h.lock.RLock()
-//	keys := h.lru.Keys()
-//	h.lock.RUnlock()
-//	return keys
-//}
+// Keys returns a slice of the keys in the cache, from oldest to newest.
+// Keys 返回缓存的切片，从最老的到最新的。
+func (h *HashLruCache) Keys() []interface{} {
+
+	var keys []interface{}
+
+	allKeys := make([][]interface{}, h.sliceNum)
+
+	// 记录最大的 oneKeys 长度
+	var oneKeysMaxLen int
+
+	for s := 0; s < h.sliceNum; s++ {
+		h.list[s].lock.RLock()
+
+		if h.list[s].lru.Len() > oneKeysMaxLen {
+			oneKeysMaxLen = h.list[s].lru.Len()
+		}
+
+		oneKeys := make([]interface{}, h.list[s].lru.Len())
+		oneKeys = h.list[s].lru.Keys()
+		h.list[s].lock.RUnlock()
+
+		allKeys[s] = oneKeys
+	}
+
+	for i := 0; i < h.list[0].lru.Len(); i++ {
+		for c := 0; c < len(allKeys); c++ {
+			if len(allKeys[c]) > i {
+				keys = append(keys, allKeys[c][i])
+			}
+		}
+	}
+
+	return keys
+}
 
 // Len returns the number of items in the cache.
 // Len 获取缓存已存在的缓存条数

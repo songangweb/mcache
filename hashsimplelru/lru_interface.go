@@ -25,7 +25,7 @@ type LRUCache interface {
 	GetOldest() (key interface{}, value *interface{}, expirationTime int64, ok bool)
 
 	// Keys 返回缓存中键的切片，从最老到最新
-	Keys() []*interface{}
+	Keys() []interface{}
 
 	// Len 获取缓存已存在的缓存条数
 	Len() int
