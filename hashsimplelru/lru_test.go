@@ -38,7 +38,10 @@ func TestLRU(t *testing.T) {
 		if v, expirationTime, ok := l.Get(k); !ok || *v != k || *v != i+128 {
 			t.Fatalf("bad i: %v, key: %v, val: %v, time: %v", i, k, *v, expirationTime)
 		}
+		l.Release(k)
 	}
+
+
 	for i := 0; i < 128; i++ {
 		_, expirationTime, ok := l.Get(i)
 		if ok {
@@ -50,7 +53,9 @@ func TestLRU(t *testing.T) {
 		if !ok {
 			t.Fatalf("should not be evicted, time: %v", expirationTime)
 		}
+		l.Release(i)
 	}
+
 	for i := 128; i < 192; i++ {
 		ok := l.Remove(i)
 		if !ok {
@@ -64,6 +69,7 @@ func TestLRU(t *testing.T) {
 		if ok {
 			t.Fatalf("should be deleted, time: %v", expirationTime)
 		}
+		l.Release(i)
 	}
 
 	l.Get(192) // expect 192 to be last key in l.Keys()
@@ -102,6 +108,8 @@ func TestLRU_GetOldest_RemoveOldest(t *testing.T) {
 	if k.(int) != 128 {
 		t.Fatalf("bad: %v", k)
 	}
+	l.Release(k)
+
 
 	k, _, _, ok = l.RemoveOldest()
 	if !ok {

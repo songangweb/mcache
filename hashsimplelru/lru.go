@@ -23,6 +23,7 @@ type LRU struct {
 type entry struct {
 	key            interface{}
 	value          *interface{}
+	reference      int64
 	expirationTime int64
 }
 
@@ -54,7 +55,7 @@ func (c *LRU) Purge() {
 }
 
 // PurgeOverdue is used to completely clear the overdue cache.
-// PurgeOverdue 清除过期缓存
+// PurgeOverdue 清除缓存
 func (c *LRU) PurgeOverdue() {
 	for _, ent := range c.items {
 		c.removeElement(ent)
@@ -74,10 +75,19 @@ func (c *LRU) Add(key interface{}, value *interface{}, expirationTime int64) (ok
 	}
 	// 判断缓存条数是否已经达到限制
 	if c.evictList.Len() >= c.size {
-		c.removeOldest()
+		// 判断是否删除成功
+		if c.removeOldest() {
+			// 创建数据
+			ent := &entry{key, value, 0, expirationTime}
+			entry := c.evictList.PushFront(ent)
+			c.items[key] = entry
+			return true
+		}
+		return false
 	}
+
 	// 创建数据
-	ent := &entry{key, value, expirationTime}
+	ent := &entry{key, value, 0, expirationTime}
 	entry := c.evictList.PushFront(ent)
 	c.items[key] = entry
 	return true
@@ -98,9 +108,25 @@ func (c *LRU) Get(key interface{}) (value *interface{}, expirationTime int64, ok
 		if ent.Value.(*entry) == nil {
 			return nil, 0, false
 		}
+
+		// 引用+1
+		ent.Value.(*entry).reference++
+
+		//fmt.Println("ent.Value.(*entry): ", ent.Value.(*entry))
 		return ent.Value.(*entry).value, ent.Value.(*entry).expirationTime, true
 	}
 	return nil, 0, false
+}
+
+// Release 缓存reference - 1 与 获取数据的方法 对应使用,  当reference为0时,数据才可以被真删
+func (c *LRU) Release(key interface{}) {
+	// 判断缓存是否存在
+	ent, ok := c.items[key]
+	if ok {
+		if ent.Value.(*entry).reference > 0 {
+			ent.Value.(*entry).reference--
+		}
+	}
 }
 
 // Contains checks if a key is in the cache, without updating the recent-ness
@@ -139,8 +165,7 @@ func (c *LRU) Peek(key interface{}) (value *interface{}, expirationTime int64, o
 // Remove 从缓存中移除提供的键
 func (c *LRU) Remove(key interface{}) (ok bool) {
 	if ent, ok := c.items[key]; ok {
-		c.removeElement(ent)
-		return ok
+		return c.removeElement(ent)
 	}
 	return ok
 }
@@ -148,31 +173,15 @@ func (c *LRU) Remove(key interface{}) (ok bool) {
 // RemoveOldest removes the oldest item from the cache.
 // RemoveOldest 从缓存中移除最老的项
 func (c *LRU) RemoveOldest() (key interface{}, value *interface{}, expirationTime int64, ok bool) {
-	if ent := c.evictList.Back(); ent != nil {
-		// 判断是否已经超时
-		if checkExpirationTime(ent.Value.(*entry).expirationTime) {
-			c.removeElement(ent)
-			return c.RemoveOldest()
-		}
-		c.removeElement(ent)
-		return ent.Value.(*entry).key, ent.Value.(*entry).value, ent.Value.(*entry).expirationTime, true
-	}
-	return nil, nil, 0, false
+	ent := c.evictList.Back()
+	return c.removeEnt(ent)
 }
 
 // GetOldest returns the oldest entry
 // GetOldest 返回最老的条目
 func (c *LRU) GetOldest() (key interface{}, value *interface{}, expirationTime int64, ok bool) {
 	ent := c.evictList.Back()
-	if ent != nil {
-		// 判断此值是否已经超时,如果超时则进行删除
-		if checkExpirationTime(ent.Value.(*entry).expirationTime) {
-			c.removeElement(ent)
-			return c.GetOldest()
-		}
-		return ent.Value.(*entry).key, ent.Value.(*entry).value, ent.Value.(*entry).expirationTime, true
-	}
-	return nil, nil, 0, false
+	return c.getRecursionEnt(ent)
 }
 
 // Keys returns a slice of the keys in the cache, from oldest to newest.
@@ -209,21 +218,71 @@ func (c *LRU) Resize(size int) (evicted int) {
 
 // removeOldest removes the oldest item from the cache.
 // removeOldest 从缓存中移除最老的项。
-func (c *LRU) removeOldest() {
+func (c *LRU) removeOldest() bool {
+	// 循环判断是否元素被引用,如果未被引用才可以删除
 	ent := c.evictList.Back()
-	if ent != nil {
-		c.removeElement(ent)
+	_, _, _, ok := c.removeEnt(ent)
+	return ok
+}
+
+// 递归判断删除reference为0 ent
+func (c *LRU) removeEnt(e *list.Element) (key interface{}, value *interface{}, expirationTime int64, ok bool) {
+	if e.Value.(*entry).reference == 0 {
+		// 判断数据是否过期了, 如果过期了,则这种数据不应该属于 删除最老的项
+		if checkExpirationTime(e.Value.(*entry).expirationTime) {
+			c.removeElement(e)
+			return c.removeEnt(e.Prev())
+		}
+		// 删除此节点数据
+		c.evictList.Remove(e)
+		delete(c.items, e.Value.(*entry).key)
+		if c.onEvict != nil {
+			c.onEvict(e.Value.(*entry).key, e.Value.(*entry).value, e.Value.(*entry).expirationTime)
+		}
+		return e.Value.(*entry).key, e.Value.(*entry).value, e.Value.(*entry).expirationTime, true
 	}
+	if e.Prev() == nil {
+		return nil, nil, 0, false
+	}
+	return c.removeEnt(e.Prev())
 }
 
 // removeElement is used to remove a given list element from the cache
 // removeElement 从缓存中移除一个列表元素
-func (c *LRU) removeElement(e *list.Element) {
-	c.evictList.Remove(e)
-	delete(c.items, e.Value.(*entry).key)
-	if c.onEvict != nil {
-		c.onEvict(e.Value.(*entry).key, e.Value.(*entry).value, e.Value.(*entry).expirationTime)
+func (c *LRU) removeElement(e *list.Element) bool {
+	if e.Value.(*entry).reference == 0 {
+		c.evictList.Remove(e)
+		delete(c.items, e.Value.(*entry).key)
+		if c.onEvict != nil {
+			c.onEvict(e.Value.(*entry).key, e.Value.(*entry).value, e.Value.(*entry).expirationTime)
+		}
+		return true
 	}
+	return false
+}
+
+
+// getOldest 从缓存中获取最老的项。
+func (c *LRU) getOldest() (key interface{}, value *interface{}, expirationTime int64, ok bool) {
+	// 循环判断是否元素被引用,如果未被引用才可以删除
+	ent := c.evictList.Back()
+	return c.getRecursionEnt(ent)
+}
+
+// 递归判断获取ent
+func (c *LRU) getRecursionEnt(e *list.Element) (key interface{}, value *interface{}, expirationTime int64, ok bool) {
+	// 判断数据是否过期了, 如果过期了,则清理垃圾数据
+	if checkExpirationTime(e.Value.(*entry).expirationTime) {
+		c.removeElement(e)
+
+		if e.Prev() == nil {
+			return nil, nil, 0, false
+		}
+		return c.getRecursionEnt(e.Prev())
+	}
+
+	e.Value.(*entry).reference++
+	return e.Value.(*entry).key, e.Value.(*entry).value, e.Value.(*entry).expirationTime, true
 }
 
 // checkExpirationTime is Determine if the cache has expired

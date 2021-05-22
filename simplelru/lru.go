@@ -151,8 +151,8 @@ func (c *LRU) RemoveOldest() (key interface{}, value interface{}, expirationTime
 			c.removeElement(ent)
 			return c.RemoveOldest()
 		}
-		c.removeElement(ent)
 
+		c.removeElement(ent)
 		return ent.Value.(*entry).key, ent.Value.(*entry).value, ent.Value.(*entry).expirationTime, true
 	}
 	return nil, nil, 0, false
@@ -161,8 +161,7 @@ func (c *LRU) RemoveOldest() (key interface{}, value interface{}, expirationTime
 // GetOldest returns the oldest entry
 // GetOldest 返回最老的条目
 func (c *LRU) GetOldest() (key interface{}, value interface{}, expirationTime int64, ok bool) {
-	ent := c.evictList.Back()
-	if ent != nil {
+	if ent := c.evictList.Back(); ent != nil {
 		// 判断此值是否已经超时,如果超时则进行删除
 		if checkExpirationTime(ent.Value.(*entry).expirationTime) {
 			c.removeElement(ent)

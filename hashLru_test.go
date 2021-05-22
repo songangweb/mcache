@@ -26,6 +26,7 @@ func BenchmarkHashLRU_Rand(b *testing.B) {
 			l.Add(trace[i], &v, 0)
 		} else {
 			_, _, ok := l.Get(trace[i])
+			l.Release(trace[i])
 			if ok {
 				hit++
 			} else {
@@ -61,6 +62,7 @@ func BenchmarkHashLRU_Freq(b *testing.B) {
 	var hit, miss int
 	for i := 0; i < b.N; i++ {
 		_, _, ok := l.Get(trace[i])
+		l.Release(trace[i])
 		if ok {
 			hit++
 		} else {
@@ -101,11 +103,13 @@ func TestHashLRU(t *testing.T) {
 		if v, _, ok := l.Get(k); !ok || *v != k {
 			t.Fatalf("bad key: %v, val: %v", k, *v)
 		}
+		l.Release(k)
 	}
 
 	for i := 128; i < 192; i++ {
 		l.Remove(i)
 		_, _, ok := l.Get(i)
+		l.Release(i)
 		if ok {
 			t.Fatalf("should be deleted")
 		}

@@ -9,6 +9,9 @@ type LRUCache interface {
 	// Get 从缓存中查找一个键的值。
 	Get(key interface{}) (value *interface{}, expirationTime int64, ok bool)
 
+	// Release 从reference引用-1
+	Release(key interface{})
+
 	// Contains 检查某个键是否在缓存中，但不更新缓存的状态
 	Contains(key interface{}) (ok bool)
 
