@@ -176,6 +176,8 @@ func (c *LFU) GetOldest() (key interface{}, value interface{}, expirationTime in
 			c.removeElement(ent)
 			return c.GetOldest()
 		}
+		// 引用自增
+		ent.Value.(*entry).weight++
 		return ent.Value.(*entry).key, ent.Value.(*entry).value, ent.Value.(*entry).expirationTime, true
 	}
 	return nil, nil, 0, false
@@ -186,7 +188,7 @@ func (c *LFU) GetOldest() (key interface{}, value interface{}, expirationTime in
 func (c *LFU) Keys() []interface{} {
 	keys := make([]interface{}, len(c.items))
 	i := 0
-	for ent := c.evictList.Front(); ent != nil; ent = ent.Next() {
+	for ent := c.evictList.Back(); ent != nil; ent = ent.Prev() {
 		keys[i] = ent.Value.(*entry).key
 		i++
 	}
