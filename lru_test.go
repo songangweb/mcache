@@ -3,6 +3,7 @@ package mcache
 import (
 	"math/rand"
 	"strconv"
+	"sync"
 	"testing"
 )
 
@@ -325,37 +326,28 @@ func TestLRU_Performance(t *testing.T) {
 	//// 在main()结束时停止性能分析
 	//defer stopper4.Stop()
 
-	count := 3000
-	l, _ := NewLRU(1000)
-	c := make(chan int)
-	num := 0
-	for {
-		for k := 0; k < count; k++ {
-			go LruPerformanceOne(l, c, k)
-		}
-		// 从channel中获取一个数据
-		data := <-c
-		// 将0视为数据结束
-		if data == 0 {
-			num++
-		}
-		if num == count {
-			break
-		}
+	count := 1000000
+	l, _ := NewLRU(2000)
+
+	wg := &sync.WaitGroup{}
+	for k := 0; k < count; k++ {
+		wg.Add(1)
+		go LruPerformanceOne(l, wg, k)
 	}
+	wg.Wait()
 }
 
 
-func LruPerformanceOne(h *LruCache, c chan int, k int) {
+func LruPerformanceOne(h *LruCache, c *sync.WaitGroup, k int) {
 	for i := 0; i < 5; i++ {
 
 		var strKey string
 
-		var strVal interface{}
-		strVal = lru_jsonStr
+		//var strVal interface{}
+		//strVal = lru_jsonStr
 
 		strKey = strconv.Itoa(k) + "_" + strconv.Itoa(i)
-		h.Add(strKey, &strVal, 0)
+		h.Add(strKey, &lru_jsonStr, 0)
 
 		//getVal, _, _ := h.Get(strKey)
 		//h.Add(strKey, getVal, 0)
@@ -363,5 +355,5 @@ func LruPerformanceOne(h *LruCache, c chan int, k int) {
 	}
 
 	// 通知main已经结束循环(我搞定了!)
-	c <- 0
+	c.Done()
 }

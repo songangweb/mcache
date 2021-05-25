@@ -2,7 +2,7 @@ package mcache
 
 import (
 	"crypto/md5"
-	hashSimpleLru "github.com/songangweb/mcache/hashsimplelru"
+	"github.com/songangweb/mcache/simplelru"
 	"math"
 	"runtime"
 	"sync"
@@ -17,7 +17,7 @@ type HashLruCache struct {
 }
 
 type HashLruCacheOne struct {
-	lru  hashSimpleLru.LRUCache
+	lru  simplelru.LRUCache
 	lock sync.RWMutex
 }
 
@@ -30,7 +30,7 @@ func NewHashLRU(size, sliceNum int) (*HashLruCache, error) {
 // NewHashLruWithEvict constructs a fixed size cache with the given eviction
 // callback.
 // NewHashLruWithEvict 用于在缓存条目被淘汰时的回调函数
-func NewHashLruWithEvict(size, sliceNum int, onEvicted func(key interface{}, value *interface{}, expirationTime int64)) (*HashLruCache, error) {
+func NewHashLruWithEvict(size, sliceNum int, onEvicted func(key interface{}, value interface{}, expirationTime int64)) (*HashLruCache, error) {
 	if 0 == sliceNum {
 		// 设置为当前cpu数量
 		sliceNum = runtime.NumCPU()
@@ -46,7 +46,7 @@ func NewHashLruWithEvict(size, sliceNum int, onEvicted func(key interface{}, val
 	h.sliceNum = sliceNum
 	h.list = make([]*HashLruCacheOne, sliceNum)
 	for i := 0; i < sliceNum; i++ {
-		l, _ := hashSimpleLru.NewLRU(lruLen, onEvicted)
+		l, _ := simplelru.NewLRU(lruLen, onEvicted)
 		h.list[i] = &HashLruCacheOne{
 			lru: l,
 		}
@@ -77,7 +77,7 @@ func (h *HashLruCache) PurgeOverdue() {
 
 // Add adds a value to the cache. Returns true if an eviction occurred.
 // Add 向缓存添加一个值。如果已经存在,则更新信息
-func (h *HashLruCache) Add(key interface{}, value *interface{}, expirationTime int64) (evicted bool) {
+func (h *HashLruCache) Add(key interface{}, value interface{}, expirationTime int64) (evicted bool) {
 	sliceKey := h.modulus(&key)
 
 	h.list[sliceKey].lock.Lock()
@@ -88,23 +88,13 @@ func (h *HashLruCache) Add(key interface{}, value *interface{}, expirationTime i
 
 // Get looks up a key's value from the cache.
 // Get 从缓存中查找一个键的值。
-func (h *HashLruCache) Get(key interface{}) (value *interface{}, expirationTime int64, ok bool) {
+func (h *HashLruCache) Get(key interface{}) (value interface{}, expirationTime int64, ok bool) {
 	sliceKey := h.modulus(&key)
 
 	h.list[sliceKey].lock.Lock()
 	value, expirationTime, ok = h.list[sliceKey].lru.Get(key)
 	h.list[sliceKey].lock.Unlock()
 	return value, expirationTime, ok
-}
-
-// Release 缓存reference - 1 与 获取数据的方法 对应使用,  当reference为0时,数据才可以被真删
-func (h *HashLruCache) Release(key interface{}) {
-	sliceKey := h.modulus(&key)
-
-	h.list[sliceKey].lock.Lock()
-	h.list[sliceKey].lru.Release(key)
-	h.list[sliceKey].lock.Unlock()
-	return
 }
 
 // Contains checks if a key is in the cache, without updating the
@@ -122,7 +112,7 @@ func (h *HashLruCache) Contains(key interface{}) bool {
 // Peek returns the key value (or undefined if not found) without updating
 // the "recently used"-ness of the key.
 // Peek 在不更新的情况下返回键值(如果没有找到则返回false),不更新缓存的状态
-func (h *HashLruCache) Peek(key interface{}) (value *interface{}, expirationTime int64, ok bool) {
+func (h *HashLruCache) Peek(key interface{}) (value interface{}, expirationTime int64, ok bool) {
 	sliceKey := h.modulus(&key)
 
 	h.list[sliceKey].lock.RLock()
@@ -137,7 +127,7 @@ func (h *HashLruCache) Peek(key interface{}) (value *interface{}, expirationTime
 // ContainsOrAdd 检查键是否在缓存中，而不更新
 // 最近或删除它，因为它是陈旧的，如果不是，添加值。
 // 返回是否找到和是否发生了驱逐。
-func (h *HashLruCache) ContainsOrAdd(key interface{}, value *interface{}, expirationTime int64) (ok, evicted bool) {
+func (h *HashLruCache) ContainsOrAdd(key interface{}, value interface{}, expirationTime int64) (ok, evicted bool) {
 	sliceKey := h.modulus(&key)
 
 	h.list[sliceKey].lock.Lock()
@@ -156,7 +146,7 @@ func (h *HashLruCache) ContainsOrAdd(key interface{}, value *interface{}, expira
 // PeekOrAdd 如果一个key在缓存中，那么这个key就不会被更新
 // 最近或删除它，因为它是陈旧的，如果不是，添加值。
 // 返回是否找到和是否发生了驱逐。
-func (h *HashLruCache) PeekOrAdd(key interface{}, value *interface{}, expirationTime int64) (previous interface{}, ok, evicted bool) {
+func (h *HashLruCache) PeekOrAdd(key interface{}, value interface{}, expirationTime int64) (previous interface{}, ok, evicted bool) {
 	sliceKey := h.modulus(&key)
 
 	h.list[sliceKey].lock.Lock()
