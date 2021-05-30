@@ -404,3 +404,4 @@ func TestARC_Peek(t *testing.T) {
 		t.Errorf("should not have updated recent-ness of 1")
 	}
 }
+

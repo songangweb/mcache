@@ -52,7 +52,7 @@ func NewARC(size int) (*ARCCache, error) {
 	if err != nil {
 		return nil, err
 	}
-	b2, err := simplelru.NewLRU(size, nil)
+	b2, err := simplelfu.NewLFU(size, nil)
 	if err != nil {
 		return nil, err
 	}
