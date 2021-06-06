@@ -2,6 +2,7 @@ package mcache
 
 import (
 	"math/rand"
+	"runtime"
 	"strconv"
 	"sync"
 	"testing"
@@ -299,6 +300,8 @@ func TestLRUResize(t *testing.T) {
 
 // Hash 性能压测
 func TestLRU_Performance(t *testing.T) {
+	//fmt.Println("runtime.NumCPU(): ", runtime.NumCPU())
+	runtime.GOMAXPROCS(runtime.NumCPU())
 
 	//cpu 性能分析 go tool pprof --pdf cpu ./cpu2.pprof > cpu.pdf
 	//开始性能分析, 返回一个停止接口
@@ -321,8 +324,8 @@ func TestLRU_Performance(t *testing.T) {
 	//// 在main()结束时停止性能分析
 	//defer stopper4.Stop()
 
-	count := 1000000
-	l, _ := NewLRU(2000)
+	count := 10000000
+	l, _ := NewLRU(20000)
 
 	wg := &sync.WaitGroup{}
 	for k := 0; k < count; k++ {
@@ -338,15 +341,8 @@ func LruPerformanceOne(h *LruCache, c *sync.WaitGroup, k int) {
 
 		var strKey string
 
-		//var strVal interface{}
-		//strVal = lru_jsonStr
-
 		strKey = strconv.Itoa(k) + "_" + strconv.Itoa(i)
 		h.Add(strKey, &testJsonStr, 0)
-
-		//getVal, _, _ := h.Get(strKey)
-		//h.Add(strKey, getVal, 0)
-		//h.Get(strKey)
 	}
 
 	// 通知main已经结束循环(我搞定了!)

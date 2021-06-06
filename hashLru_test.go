@@ -2,6 +2,7 @@ package mcache
 
 import (
 	"math/rand"
+	"runtime"
 	"strconv"
 	"sync"
 	"testing"
@@ -279,8 +280,10 @@ func TestHashLRUResize(t *testing.T) {
 
 // HashLRU 性能压测
 func TestHashLRU_Performance(t *testing.T) {
+	runtime.GOMAXPROCS(runtime.NumCPU())
+	//runtime.GOMAXPROCS(1)
 
-	//cpu 性能分析 go tool pprof --pdf cpu ./cpu2.pprof > cpu.pdf
+	//cpu 性能分析 go tool pprof --pdf cpu ./cpu.pprof > cpu2.pdf
 	//开始性能分析, 返回一个停止接口
 	//stopper1 := profile.Start(profile.CPUProfile, profile.ProfilePath("."))
 	////在main()结束时停止性能分析
@@ -301,8 +304,8 @@ func TestHashLRU_Performance(t *testing.T) {
 	//// 在main()结束时停止性能分析
 	//defer stopper4.Stop()
 
-	count := 1000000
-	l, _ := NewHashLRU(2000, 8)
+	count := 10000000
+	l, _ := NewHashLRU(20000, 64)
 
 	wg := &sync.WaitGroup{}
 	for k := 0; k < count; k++ {
@@ -323,13 +326,6 @@ func HashlruPerformanceOne(h *HashLruCache, c *sync.WaitGroup, k int) {
 
 		h.Add(strKey, &testJsonStr, 0)
 
-		//getVal, _, _ := h.Get(strKey)
-		//h.Get(strKey)
-		//h.Add(strKey, getVal, 0)
-		//h.Release(strKey)
-
-		//h.Get(strKey)
-		//h.Release(strKey)
 	}
 
 	// 通知main已经结束循环(我搞定了!)

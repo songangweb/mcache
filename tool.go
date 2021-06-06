@@ -30,9 +30,8 @@ func InterfaceToString(i interface{}) string {
 	case uint32:
 		return strconv.FormatInt(int64(i.(uint32)),10)
 	case uint64:
-		// todo 待确认是否丢失精度
-		//return fmt.Sprintf("%d", i), nil
-		return strconv.FormatInt(int64(i.(uint64)),10)
+		return fmt.Sprintf("%d", i)
+		//return strconv.FormatInt(int64(i.(uint64)),10)
 	case float32:
 		return strconv.FormatFloat(float64(i.(float32)), 'f', -1, 32)
 	case float64:
