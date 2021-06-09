@@ -133,6 +133,14 @@ func (c *LfuCache) Resize(size int) (evicted int) {
 	return evicted
 }
 
+// ResizeWeight 改变缓存中Weight大小。
+// ResizeWeight 改变缓存中Weight大小。
+func (c *LfuCache) ResizeWeight(percentage int64){
+	c.lock.Lock()
+	c.lfu.ResizeWeight(percentage)
+	c.lock.Unlock()
+}
+
 // RemoveOldest removes the oldest item from the cache.
 // RemoveOldest 从缓存中移除最老的项
 func (c *LfuCache) RemoveOldest() (key interface{}, value interface{}, expirationTime int64, ok bool) {
