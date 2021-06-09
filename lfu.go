@@ -135,7 +135,7 @@ func (c *LfuCache) Resize(size int) (evicted int) {
 
 // ResizeWeight 改变缓存中Weight大小。
 // ResizeWeight 改变缓存中Weight大小。
-func (c *LfuCache) ResizeWeight(percentage int64){
+func (c *LfuCache) ResizeWeight(percentage int){
 	c.lock.Lock()
 	c.lfu.ResizeWeight(percentage)
 	c.lock.Unlock()

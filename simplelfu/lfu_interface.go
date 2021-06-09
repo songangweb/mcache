@@ -40,5 +40,5 @@ type LFUCache interface {
 	Resize(int) int
 
 	// ResizeWeight 调整缓存中weight引用次数
-	ResizeWeight(int64)
+	ResizeWeight(int)
 }

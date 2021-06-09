@@ -218,10 +218,10 @@ func (c *LFU) Resize(size int) (evicted int) {
 
 // ResizeWeight changes the cache eight weight size.
 // ResizeWeight 改变缓存中Weight大小。
-func (c *LFU) ResizeWeight(percentage int64) {
+func (c *LFU) ResizeWeight(percentage int) {
 	if percentage > 0 || percentage < 100 {
 		for ent := c.evictList.Back(); ent != nil; ent = ent.Prev() {
-			ent.Value.(*entry).weight = int64(math.Ceil(float64(ent.Value.(*entry).weight * 100 / percentage)))
+			ent.Value.(*entry).weight = int64(math.Ceil(float64(ent.Value.(*entry).weight * 100 / int64(percentage))))
 		}
 	}
 }

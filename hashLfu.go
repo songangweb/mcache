@@ -192,7 +192,7 @@ func (h *HashLfuCache) Resize(size int) (evicted int) {
 
 // ResizeWeight 改变缓存中Weight大小。
 // ResizeWeight 改变缓存中Weight大小。
-func (h *HashLfuCache) ResizeWeight(percentage int64) {
+func (h *HashLfuCache) ResizeWeight(percentage int) {
 	for i := 0; i < h.sliceNum; i++ {
 		h.list[i].lock.Lock()
 		h.list[i].lfu.ResizeWeight(percentage)
