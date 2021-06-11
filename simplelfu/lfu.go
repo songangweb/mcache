@@ -221,7 +221,7 @@ func (c *LFU) Resize(size int) (evicted int) {
 func (c *LFU) ResizeWeight(percentage int) {
 	if percentage > 0 || percentage < 100 {
 		for ent := c.evictList.Back(); ent != nil; ent = ent.Prev() {
-			ent.Value.(*entry).weight = int64(math.Ceil(float64(ent.Value.(*entry).weight * 100 / int64(percentage))))
+			ent.Value.(*entry).weight = int64(math.Ceil(float64(ent.Value.(*entry).weight / 100 * int64(percentage))))
 		}
 	}
 }
