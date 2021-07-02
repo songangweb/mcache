@@ -59,7 +59,10 @@ func (c *LFU) Purge() {
 // PurgeOverdue 清除过期缓存
 func (c *LFU) PurgeOverdue() {
 	for _, ent := range c.items {
-		c.removeElement(ent)
+		// 判断此值是否已经超时,如果超时则进行删除
+		if checkExpirationTime(ent.Value.(*entry).expirationTime) {
+			c.removeElement(ent)
+		}
 	}
 	c.evictList.Init()
 }
