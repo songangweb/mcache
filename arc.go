@@ -263,6 +263,15 @@ func (c *ARCCache) Contains(key interface{}) bool {
 	return c.t1.Contains(key) || c.t2.Contains(key)
 }
 
+// ResizeWeight 改变缓存中lfu的Weight大小。
+// ResizeWeight 改变缓存中lfu的Weight大小。
+func (c *ARCCache) ResizeWeight(percentage int) {
+	c.lock.Lock()
+	c.t2.ResizeWeight(percentage)
+	c.b2.ResizeWeight(percentage)
+	c.lock.Unlock()
+}
+
 // Peek is used to inspect the cache value of a key
 // without updating recency or frequency.
 // Peek 在不更新的情况下返回键值(如果没有找到则返回false),不更新缓存的状态
