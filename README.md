@@ -85,6 +85,11 @@ durl 是根据JetBrains sro授予的免费JetBrains开源许可证与GoLand一�
 
 [免费申请 jetbrains 全家桶](https://zhuanlan.zhihu.com/p/264139984?utm_source=wechat_session)
 
+
+## Stargazers over time
+[![Stargazers over time](https://starchart.cc/songangweb/mcache.svg)](https://starchart.cc/songangweb/mcache)
+
+
 ## 赞助商
 #### RobeeAsk http://durl.robeeask.com/  付费问答社区
 #### 有问题也可以在此交流
