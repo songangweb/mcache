@@ -23,7 +23,11 @@ func TestLFU(t *testing.T) {
 
 	for i := 0; i < 256; i++ {
 		l.Add(i, i, initTime)
-		for c := 0; c < i; c++ {
+                cnt := i
+                if cnt > 128 {
+                    cnt = 128
+                }
+		for c := 0; c < cnt; c++ {
 			l.Get(i)
 		}
 	}
