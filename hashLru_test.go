@@ -277,7 +277,6 @@ func TestHashLRUResize(t *testing.T) {
 	}
 }
 
-
 // HashLRU 性能压测
 func TestHashLRU_Performance(t *testing.T) {
 	runtime.GOMAXPROCS(runtime.NumCPU())
@@ -316,7 +315,6 @@ func TestHashLRU_Performance(t *testing.T) {
 
 }
 
-
 func HashlruPerformanceOne(h *HashLruCache, c *sync.WaitGroup, k int) {
 
 	for i := 0; i < 5; i++ {
@@ -331,8 +329,3 @@ func HashlruPerformanceOne(h *HashLruCache, c *sync.WaitGroup, k int) {
 	// 通知main已经结束循环(我搞定了!)
 	c.Done()
 }
-
-
-
-
-

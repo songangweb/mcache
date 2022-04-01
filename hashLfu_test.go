@@ -84,9 +84,7 @@ func TestHashLFU(t *testing.T) {
 	}
 
 	for i := 0; i < 256; i++ {
-		var v interface{}
-		v = i
-		l.Add(i, &v, 0)
+		l.Add(i, i, 0)
 	}
 
 	if l.Len() != 128 {
@@ -280,9 +278,6 @@ func TestHashLFUResize(t *testing.T) {
 	}
 }
 
-
-
-
 // HashLFU 性能压测
 func TestHashLFU_Performance(t *testing.T) {
 	runtime.GOMAXPROCS(runtime.NumCPU())
@@ -320,7 +315,6 @@ func TestHashLFU_Performance(t *testing.T) {
 
 }
 
-
 func HashlfuPerformanceOne(h *HashLfuCache, c *sync.WaitGroup, k int) {
 
 	for i := 0; i < 5; i++ {
@@ -334,8 +328,3 @@ func HashlfuPerformanceOne(h *HashLfuCache, c *sync.WaitGroup, k int) {
 	// 通知main已经结束循环(我搞定了!)
 	c.Done()
 }
-
-
-
-
-

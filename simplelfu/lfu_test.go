@@ -27,6 +27,7 @@ func TestLFU(t *testing.T) {
 			l.Get(i)
 		}
 	}
+
 	if l.Len() != 128 {
 		t.Fatalf("bad len: %v", l.Len())
 	}
@@ -36,8 +37,8 @@ func TestLFU(t *testing.T) {
 	}
 
 	for i, k := range l.Keys() {
-		if v, expirationTime, ok := l.Get(k); !ok || v != k || v != 255-i {
-			t.Fatalf("bad key: %v, time: %v", k, expirationTime)
+		if v, expirationTime, ok := l.Get(k); !ok || v != k || v != i+128 {
+			t.Fatalf("bad i: %v, key: %v, v: %v, time: %v", i, k, v, expirationTime)
 		}
 	}
 	for i := 0; i < 128; i++ {
@@ -68,9 +69,9 @@ func TestLFU(t *testing.T) {
 		}
 	}
 
-	l.Get(192) // expect 192 to be last key in l.Keys()
+	l.Get(192) // expect 192 to be first key in l.Keys()
 	for i, k := range l.Keys() {
-		if (i < 63 && k != 255-i) || (i == 63 && k != 192) {
+		if i < 63 && k != 192+i {
 			t.Fatalf("out of order i:% v ,key: %v", i, k)
 		}
 	}
